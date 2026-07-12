@@ -1,30 +1,7 @@
-# =========================================================================
-# Text-to-3D via Score Distillation Sampling (SDS) — Kaggle T4 version
-# -------------------------------------------------------------------------
-# Idea: optimize a small NeRF from SCRATCH (no 3D data) using a frozen
-# Stable Diffusion model as a "critic". At every step we:
-#   1. Pick a random camera around the object
-#   2. Render an image from the NeRF
-#   3. Noise it, ask SD "was this noise level correct for this prompt?"
-#   4. Use the prediction error as a gradient signal into the NeRF
-#
-# This is a simplified, educational reimplementation of the core idea
-# behind DreamFusion / Stable-DreamFusion. It is NOT feature complete
-# (no view-dependent prompting, no orientation/normal losses, no mesh
-# extraction) — but it runs end-to-end on a single T4 (16GB) and gives
-# you a real result + a real codebase to extend for your CV project.
-#
-# Run this in a Kaggle notebook with GPU (T4 x1 or x2) enabled.
-# =========================================================================
 
-# %% [Cell 1] Install deps (Kaggle usually has torch pre-installed)
-# IMPORTANT: run this cell, then RESTART THE KERNEL (Run > Restart session),
-# then run Cell 2 onward. Kaggle's pre-installed huggingface_hub is newer
-# than old diffusers versions expect (removed `cached_download`), so we
-# pin everything together to a known-compatible set.
-# !pip install -q -U diffusers==0.31.0 transformers==4.46.0 accelerate==1.0.1 huggingface_hub==0.26.2 imageio==2.34.0
+!pip install -q -U diffusers==0.31.0 transformers==4.46.0 accelerate==1.0.1 huggingface_hub==0.26.2 imageio==2.34.0
 
-# %% [Cell 2] Imports & config
+
 import math
 import os
 import torch
@@ -55,7 +32,7 @@ os.makedirs(OUT_DIR, exist_ok=True)
 
 MODEL_ID = "stable-diffusion-v1-5/stable-diffusion-v1-5"  # HF Hub mirror of SD1.5
 
-# %% [Cell 3] Load frozen Stable Diffusion components (fp16 to save VRAM)
+
 print("Loading Stable Diffusion components from Hugging Face...")
 tokenizer    = CLIPTokenizer.from_pretrained(MODEL_ID, subfolder="tokenizer")
 text_encoder = CLIPTextModel.from_pretrained(MODEL_ID, subfolder="text_encoder", torch_dtype=torch.float16).to(device)
@@ -85,7 +62,7 @@ def get_text_embeddings(prompt, negative_prompt):
     return torch.cat([uncond, cond], dim=0).half()
 
 
-# %% [Cell 4] Tiny NeRF (positional-encoding MLP) — this is what we're TRAINING
+
 class PositionalEncoding(nn.Module):
     def __init__(self, n_freqs=10):
         super().__init__()
@@ -118,7 +95,7 @@ class TinyNeRF(nn.Module):
         return sigma, rgb
 
 
-# %% [Cell 5] Camera sampling + volume rendering
+
 def sample_camera(radius=CAM_RADIUS):
     """Random camera on a sphere looking at the origin."""
     azimuth   = np.random.uniform(0, 2 * math.pi)
@@ -181,7 +158,7 @@ def render_image(nerf, res=NERF_RES):
     return img
 
 
-# %% [Cell 6] SDS loss
+
 def sds_loss(nerf, text_embeds):
     img = render_image(nerf, NERF_RES)                 # [3, res, res], requires_grad
     img = img.clamp(0, 1)                               # guard against numerical drift outside [0,1]
@@ -222,7 +199,7 @@ def sds_loss(nerf, text_embeds):
     return loss, img.detach()
 
 
-# %% [Cell 7] Training loop
+
 def train():
     nerf = TinyNeRF().to(device)
     optimizer = torch.optim.Adam(nerf.parameters(), lr=LR)
@@ -290,7 +267,7 @@ def render_turntable(nerf, n_frames=24, res=96, out_path=None):
     print(f"Saved turntable to {out_path}")
 
 
-# %% [Cell 8] Run it
+
 if __name__ == "__main__":
     nerf = train()
     render_turntable(nerf)
