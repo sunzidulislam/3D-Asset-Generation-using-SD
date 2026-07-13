@@ -14,9 +14,6 @@
   <text x="620" y="34" text-anchor="middle" font-size="20" font-weight="700" fill="#1a1c22">
     Text-to-3D via Score Distillation Sampling — Pipeline
   </text>
-  <text x="620" y="56" text-anchor="middle" font-size="12.5" fill="#6b7280">
-    a frozen 2D diffusion model critiques random-view NeRF renders; only the NeRF is trained
-  </text>
 
   <!-- ===== Row 1: text -> conditioning ===== -->
   <rect x="470" y="86" width="300" height="60" rx="10" fill="#eef4ff" stroke="#3b6fd1" stroke-width="1.6"/>
@@ -99,25 +96,4 @@
   <text x="740" y="503" text-anchor="middle" font-size="11" fill="#33456f">3D-consistent across all sampled views</text>
   <text x="740" y="518" text-anchor="middle" font-size="11" fill="#33456f">→ rendered turntable GIF</text>
 
-  <!-- ===================== Legend / summary box ===================== -->
-  <g>
-    <rect x="30" y="560" width="1180" height="180" rx="14" fill="#fafafb" stroke="#d8dae0" stroke-width="1.4"/>
-    <text x="52" y="588" font-size="13" font-weight="700" fill="#1a1c22">Key idea: only ONE component is ever trained</text>
-
-    <circle cx="66" cy="614" r="6" fill="#2f9e5c"/>
-    <text x="82" y="619" font-size="11.5" fill="#33363f">Green (NeRF + render loop) — the only trainable component; ~a few hundred thousand parameters</text>
-
-    <circle cx="66" cy="640" r="6" fill="#7c4fd1"/>
-    <text x="82" y="645" font-size="11.5" fill="#33363f">Purple (VAE + UNet) — Stable Diffusion 1.5, frozen throughout; used only for inference, never backpropagated through</text>
-
-    <circle cx="66" cy="666" r="6" fill="#d1822f"/>
-    <text x="82" y="671" font-size="11.5" fill="#33363f">Orange (SDS gradient + backprop) — the "distillation" step: the diffusion critic's opinion becomes a training signal for the NeRF</text>
-
-    <circle cx="66" cy="692" r="6" fill="#3b6fd1"/>
-    <text x="82" y="697" font-size="11.5" fill="#33363f">Blue (prompt + output) — the only user-facing input, and the final 3D result</text>
-
-    <text x="52" y="722" font-size="11.5" fill="#6b7280">
-      This loop runs once per training step (~1500 total), each time with a freshly sampled random camera angle and diffusion timestep.
-    </text>
-  </g>
 </svg>
