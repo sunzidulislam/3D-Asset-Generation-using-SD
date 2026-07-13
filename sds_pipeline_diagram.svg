@@ -1,0 +1,123 @@
+<svg viewBox="0 0 1240 760" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4a4f5c"/>
+    </marker>
+    <marker id="arrowLoop" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#b3400f"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1240" height="760" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="620" y="34" text-anchor="middle" font-size="20" font-weight="700" fill="#1a1c22">
+    Text-to-3D via Score Distillation Sampling — Pipeline
+  </text>
+  <text x="620" y="56" text-anchor="middle" font-size="12.5" fill="#6b7280">
+    a frozen 2D diffusion model critiques random-view NeRF renders; only the NeRF is trained
+  </text>
+
+  <!-- ===== Row 1: text -> conditioning ===== -->
+  <rect x="470" y="86" width="300" height="60" rx="10" fill="#eef4ff" stroke="#3b6fd1" stroke-width="1.6"/>
+  <text x="620" y="110" text-anchor="middle" font-size="12.5" font-weight="700" fill="#204488">Text prompt + negative prompt</text>
+  <text x="620" y="128" text-anchor="middle" font-size="11" fill="#33456f">e.g. "a corgi wearing a wizard hat"</text>
+
+  <line x1="620" y1="146" x2="620" y2="172" stroke="#4a4f5c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="470" y="176" width="300" height="56" rx="10" fill="#eef4ff" stroke="#3b6fd1" stroke-width="1.6"/>
+  <text x="620" y="200" text-anchor="middle" font-size="12.5" font-weight="700" fill="#204488">CLIP Text Encoder — frozen</text>
+  <text x="620" y="217" text-anchor="middle" font-size="11" fill="#33456f">→ cond + uncond embeddings (for CFG)</text>
+
+  <line x1="620" y1="232" x2="620" y2="258" stroke="#4a4f5c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===== Row 2: NeRF render loop ===== -->
+  <rect x="60" y="262" width="230" height="70" rx="10" fill="#eafaf0" stroke="#2f9e5c" stroke-width="1.6"/>
+  <text x="175" y="286" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1c6b3d">Random camera pose</text>
+  <text x="175" y="303" text-anchor="middle" font-size="11" fill="#276b41">azimuth ∈[0,2π), elev ∈[-10°,60°]</text>
+  <text x="175" y="318" text-anchor="middle" font-size="11" fill="#276b41">+ ray casting</text>
+
+  <line x1="290" y1="297" x2="325" y2="297" stroke="#4a4f5c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="330" y="262" width="230" height="70" rx="10" fill="#eafaf0" stroke="#2f9e5c" stroke-width="1.6"/>
+  <text x="445" y="286" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1c6b3d">Tiny NeRF — TRAINABLE</text>
+  <text x="445" y="303" text-anchor="middle" font-size="11" fill="#276b41">64 samples/ray, volume rendering</text>
+  <text x="445" y="318" text-anchor="middle" font-size="11" fill="#276b41">→ rendered image 64×64</text>
+
+  <line x1="560" y1="297" x2="595" y2="297" stroke="#4a4f5c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="600" y="262" width="230" height="70" rx="10" fill="#eafaf0" stroke="#2f9e5c" stroke-width="1.6"/>
+  <text x="715" y="286" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1c6b3d">Bilinear upsample</text>
+  <text x="715" y="303" text-anchor="middle" font-size="11" fill="#276b41">64×64 → 512×512</text>
+  <text x="715" y="318" text-anchor="middle" font-size="11" fill="#276b41">(VAE's expected input size)</text>
+
+  <line x1="830" y1="297" x2="865" y2="297" stroke="#4a4f5c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="870" y="262" width="300" height="70" rx="10" fill="#f4eeff" stroke="#7c4fd1" stroke-width="1.6"/>
+  <text x="1020" y="286" text-anchor="middle" font-size="12.5" font-weight="700" fill="#4a2488">VAE Encoder — frozen</text>
+  <text x="1020" y="303" text-anchor="middle" font-size="11" fill="#4a3470">Stable Diffusion 1.5 (Hugging Face)</text>
+  <text x="1020" y="318" text-anchor="middle" font-size="11" fill="#4a3470">→ latent 64×64×4</text>
+
+  <line x1="1020" y1="332" x2="1020" y2="358" stroke="#4a4f5c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===== Row 3: noise + UNet ===== -->
+  <rect x="800" y="362" width="370" height="70" rx="10" fill="#f4eeff" stroke="#7c4fd1" stroke-width="1.6"/>
+  <text x="985" y="386" text-anchor="middle" font-size="12.5" font-weight="700" fill="#4a2488">Add noise ε at random timestep t</text>
+  <text x="985" y="403" text-anchor="middle" font-size="11" fill="#4a3470">t ∈ [0.02·T, 0.98·T]  (DDPM schedule)</text>
+  <text x="985" y="418" text-anchor="middle" font-size="11" fill="#4a3470">then UNet predicts ε̂ (2× fwd pass, cond+uncond)</text>
+
+  <line x1="800" y1="397" x2="765" y2="397" stroke="#4a4f5c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="490" y="362" width="300" height="70" rx="10" fill="#f4eeff" stroke="#7c4fd1" stroke-width="1.6"/>
+  <text x="640" y="386" text-anchor="middle" font-size="12.5" font-weight="700" fill="#4a2488">UNet Noise Predictor — frozen</text>
+  <text x="640" y="403" text-anchor="middle" font-size="11" fill="#4a3470">Stable Diffusion 1.5 (Hugging Face)</text>
+  <text x="640" y="418" text-anchor="middle" font-size="11" fill="#4a3470">CFG scale s≈40: ε̂ = ε_u + s·(ε_c − ε_u)</text>
+
+  <line x1="490" y1="397" x2="455" y2="397" stroke="#4a4f5c" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===== Row 4: SDS gradient + backprop ===== -->
+  <rect x="150" y="362" width="290" height="70" rx="10" fill="#fff3e6" stroke="#d1822f" stroke-width="1.6"/>
+  <text x="295" y="386" text-anchor="middle" font-size="12.5" font-weight="700" fill="#8a4f14">SDS gradient (no UNet backprop)</text>
+  <text x="295" y="403" text-anchor="middle" font-size="11" fill="#79490f">∇ = w(t) · (ε̂ − ε)</text>
+  <text x="295" y="418" text-anchor="middle" font-size="11" fill="#79490f">UNet used for inference only</text>
+
+  <line x1="295" y1="432" x2="295" y2="458" stroke="#b3400f" stroke-width="2.4" marker-end="url(#arrowLoop)"/>
+
+  <rect x="60" y="462" width="470" height="70" rx="10" fill="#fff3e6" stroke="#d1822f" stroke-width="1.6"/>
+  <text x="295" y="486" text-anchor="middle" font-size="12.5" font-weight="700" fill="#8a4f14">Backprop through VAE-encode + render → NeRF weights</text>
+  <text x="295" y="503" text-anchor="middle" font-size="11" fill="#79490f">gradient clipped, magnitude-normalized (stability)</text>
+  <text x="295" y="518" text-anchor="middle" font-size="11" fill="#79490f">Adam optimizer step updates ONLY the NeRF</text>
+
+  <!-- Loop back arrow to NeRF box, indicating repeated iterations -->
+  <path d="M 175 462 C 175 420, 175 400, 175 335" fill="none" stroke="#b3400f" stroke-width="2.4" stroke-dasharray="6,4" marker-end="url(#arrowLoop)"/>
+  <text x="90" y="415" font-size="11" fill="#b3400f" font-weight="600" transform="rotate(-90 90 415)">repeat ~1500 steps</text>
+
+  <!-- ===== Output ===== -->
+  <line x1="530" y1="497" x2="590" y2="497" stroke="#4a4f5c" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="595" y="462" width="290" height="70" rx="10" fill="#eef4ff" stroke="#3b6fd1" stroke-width="1.6"/>
+  <text x="740" y="486" text-anchor="middle" font-size="12.5" font-weight="700" fill="#204488">Converged NeRF</text>
+  <text x="740" y="503" text-anchor="middle" font-size="11" fill="#33456f">3D-consistent across all sampled views</text>
+  <text x="740" y="518" text-anchor="middle" font-size="11" fill="#33456f">→ rendered turntable GIF</text>
+
+  <!-- ===================== Legend / summary box ===================== -->
+  <g>
+    <rect x="30" y="560" width="1180" height="180" rx="14" fill="#fafafb" stroke="#d8dae0" stroke-width="1.4"/>
+    <text x="52" y="588" font-size="13" font-weight="700" fill="#1a1c22">Key idea: only ONE component is ever trained</text>
+
+    <circle cx="66" cy="614" r="6" fill="#2f9e5c"/>
+    <text x="82" y="619" font-size="11.5" fill="#33363f">Green (NeRF + render loop) — the only trainable component; ~a few hundred thousand parameters</text>
+
+    <circle cx="66" cy="640" r="6" fill="#7c4fd1"/>
+    <text x="82" y="645" font-size="11.5" fill="#33363f">Purple (VAE + UNet) — Stable Diffusion 1.5, frozen throughout; used only for inference, never backpropagated through</text>
+
+    <circle cx="66" cy="666" r="6" fill="#d1822f"/>
+    <text x="82" y="671" font-size="11.5" fill="#33363f">Orange (SDS gradient + backprop) — the "distillation" step: the diffusion critic's opinion becomes a training signal for the NeRF</text>
+
+    <circle cx="66" cy="692" r="6" fill="#3b6fd1"/>
+    <text x="82" y="697" font-size="11.5" fill="#33363f">Blue (prompt + output) — the only user-facing input, and the final 3D result</text>
+
+    <text x="52" y="722" font-size="11.5" fill="#6b7280">
+      This loop runs once per training step (~1500 total), each time with a freshly sampled random camera angle and diffusion timestep.
+    </text>
+  </g>
+</svg>
