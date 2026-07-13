@@ -43,6 +43,7 @@ Only the NeRF (~a few hundred thousand parameters, positional-encoding MLP) is o
 - ✅ Gradient magnitude normalization (rescale raw SDS gradient to unit mean-abs before backprop)
 - ✅ Kaggle T4-compatible (fits within 16GB at 64×64 NeRF / 512×512 guidance resolution)
 
+
 ## Planned
 
 - 📌 Mesh extraction (marching cubes → `.obj`/`.ply`)
@@ -252,6 +253,25 @@ The repository is under active development.
 - [ ] Quantitative evaluation (CLIP similarity, Janus-frequency, etc.)
 - [ ] Ablation studies (resolution, guidance scale, representation)
 - [ ] Runtime/memory benchmarking
+- [ ] Human-preference alignment via reward-weighted distillation (RewardSDS, DreamReward)
+- [ ] Consistency-distillation-based SDS variant for faster convergence (SegmentDreamer)
+- [ ] VLM-based spatial/semantic critics in place of/alongside the diffusion UNet critic
+
+### Recent related work (2025–2026) informing this roadmap
+
+- **RewardSDS** (2025) — aligns score distillation with human preference via
+  reward-weighted sampling, addressing SDS's tendency toward generic,
+  reward-agnostic outputs.
+- **SegmentDreamer** (2025) — connects Consistency Distillation to score
+  distillation, achieving high-fidelity text-to-3D in ~32 minutes on a
+  single A100 via 3D Gaussian Splatting — directly relevant to the planned
+  Gaussian Splatting backend above.
+- **"Let Language Constrain Geometry"** (2025) — uses Vision-Language
+  Models as semantic and spatial critics for 3D generation, a candidate
+  direction beyond/alongside the diffusion-UNet-only critic used here.
+- **ProlificDreamer / Variational Score Distillation** (Wang et al., 2023)
+  remains the most-cited reformulation of the base SDS loss and the
+  natural first comparison point for any loss-level extension of this repo.
 
 ---
 
@@ -297,6 +317,22 @@ placeholders for numbers already obtained:
 6. **Tang, J., et al.**
    *DreamGaussian: Generative Gaussian Splatting for Efficient 3D Content Creation.*
    ICLR, 2024.
+
+7. **Wang, Z., et al.**
+   *ProlificDreamer: High-Fidelity and Diverse Text-to-3D Generation with
+   Variational Score Distillation.*
+   NeurIPS, 2023.
+
+8. **RewardSDS: Aligning Score Distillation via Reward-Weighted Sampling.**
+   arXiv, 2025.
+
+9. **SegmentDreamer: Towards High-fidelity Text-to-3D Synthesis with
+   Segmented Consistency Trajectory Distillation.**
+   arXiv, 2025.
+
+10. **Let Language Constrain Geometry: Vision-Language Models as Semantic
+    and Spatial Critics for 3D Generation.**
+    arXiv, 2025.
 
 ---
 
