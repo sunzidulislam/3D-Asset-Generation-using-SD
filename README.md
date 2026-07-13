@@ -1,4 +1,5 @@
 # Few-Shot Text-to-3D Generation via Score Distillation Sampling (SDS)
+**Status: Ongoing / actively developed**
 
 A from-scratch, educational reimplementation of the core idea behind
 DreamFusion (Poole et al., 2022): generating a 3D object from a text
@@ -21,8 +22,8 @@ premise of Score Distillation Sampling (SDS), introduced in DreamFusion.
 
 This project reimplements that idea in a compact form that runs on a
 single Kaggle T4 GPU, and is scoped so it can be extended with a small
-novel experiment (see §6, Future Work) — turning it from a reproduction
-into a research project.
+novel experiment (see §6, Roadmap) — turning it from a reproduction into
+a research project.
 
 ---
 
@@ -82,7 +83,19 @@ single set of NeRF parameters must satisfy the diffusion critic from
 
 ## 3. Methodology (this implementation)
 
-### 3.1 Pipeline overview
+**Figure 1** below shows the full training loop: a text prompt is encoded
+once, then every step renders the NeRF from a random camera, asks the
+frozen Stable Diffusion UNet to critique the render at a random noise
+level, and turns that critique into a gradient that updates only the
+NeRF's weights.
+
+![SDS pipeline architecture](sds_pipeline_diagram.svg)
+*Figure 1: End-to-end Score Distillation Sampling loop. Green = the only
+trainable component (NeRF); purple = the frozen Stable Diffusion critic;
+orange = the distillation step that turns the critic's output into a
+training signal; blue = user-facing input/output.*
+
+### 3.1 Pipeline overview (text form)
 
 ```
  text prompt
@@ -140,15 +153,26 @@ prediction are computed and combined:
 ε_φ = ε_uncond + s · (ε_cond − ε_uncond)
 ```
 
-with a large guidance scale (`s ≈ 40`), which is standard for SDS — much
-higher than typical 2D image generation (`s ≈ 7.5`), because SDS needs a
-stronger signal to escape blurry/degenerate solutions early in training.
+with a large guidance scale (`s ≈ 25–40`), which is standard for SDS —
+much higher than typical 2D image generation (`s ≈ 7.5`), because SDS
+needs a stronger signal to escape blurry/degenerate solutions early in
+training.
 
 ### 3.5 Timestep sampling
 Timesteps are restricted to `t ∈ [0.02·T, 0.98·T]`, avoiding the extremes
 of the noise schedule where the gradient signal is either near-zero
 (very low noise) or dominated by pure noise (very high noise) — a known
 stabilization trick from the DreamFusion line of work.
+
+### 3.6 Training stability
+Early experiments without safeguards collapsed to a degenerate flat-color
+solution (the NeRF saturating to a single uniform color across all views).
+Two fixes were needed: **gradient norm clipping**, and **gradient
+magnitude normalization** (rescaling the raw SDS gradient to a consistent
+per-element magnitude before backprop, since the raw magnitude otherwise
+swings drastically step-to-step depending on the sampled timestep and how
+"wrong" the current render looks). Both are active in the current
+implementation.
 
 ---
 
@@ -161,8 +185,8 @@ stabilization trick from the DreamFusion line of work.
 | NeRF render resolution | 64×64 |
 | Guidance (VAE/UNet) resolution | 512×512 |
 | Samples per ray | 64 |
-| Guidance scale | 40 |
-| Optimizer | Adam, lr = 1e-2 |
+| Guidance scale | 25 |
+| Optimizer | Adam, lr = 2e-3, grad-clip norm 1.0 |
 | Iterations | 1500 |
 | Precision | fp16 for SD components, fp32 for NeRF |
 
@@ -177,38 +201,38 @@ stabilization trick from the DreamFusion line of work.
    with older `diffusers` releases).
 4. Run Cells 2–8 in order. Set `PROMPT` in Cell 2 to your object of choice.
 5. Outputs are written to `/kaggle/working/sds_output/`:
-   - `preview_step{N}.png` — single-view snapshots every 250 steps
+   - `preview_step{N}.png` — single-view snapshots every 100 steps
    - `turntable.gif` — 360° render of the final result
 
 Expect ~30–50 minutes for 1500 iterations on a T4 at this resolution.
 
 ---
 
-## 6. Limitations & future work (ideas for extending this into a research contribution)
+## 6. Roadmap (in progress)
 
 This implementation deliberately omits several components used in full
-DreamFusion-family pipelines, each of which is a legitimate direction to
-extend this project:
+DreamFusion-family pipelines. Each is an active or planned direction:
 
-- **No view-dependent prompting.** Real pipelines append text like "front
-  view" / "back view" / "side view" to the prompt based on the sampled
-  camera azimuth. Without this, the model has no signal distinguishing
-  "front" from "back," which is the primary cause of the well-known
-  **Janus problem** (multi-face artifacts — e.g., a generated animal
-  growing a face on the back of its head). **This is the single highest-value
-  addition** for turning this from a reproduction into a research project:
-  implement it, then run a controlled A/B comparison (with vs. without)
-  on a fixed set of prompts and measure Janus-artifact frequency.
-- **No normal-smoothness / orientation losses**, which real pipelines add
-  to discourage flat, degenerate, "billboard" geometry.
-- **No mesh extraction.** The output stays an implicit NeRF; a natural
-  extension is marching cubes to export a `.obj`/`.ply` mesh.
-- **Low resolution**, constrained by T4 memory — a natural ablation is
-  studying the resolution/quality tradeoff, or replacing the NeRF with
-  3D Gaussian Splatting for faster convergence.
-- **Single 2D prior (SD 1.5).** Swapping in a multi-view-aware diffusion
-  model (e.g., MVDream, Zero-1-to-3) is a known, published mitigation for
-  3D inconsistency and would make for a strong comparative experiment.
+- **View-dependent prompting (highest priority).** Real pipelines append
+  text like "front view" / "back view" / "side view" to the prompt based
+  on the sampled camera azimuth. Without this, the model has no signal
+  distinguishing "front" from "back," which is the primary cause of the
+  well-known **Janus problem** (multi-face artifacts — e.g., a generated
+  animal growing a face on the back of its head). Planned: implement this,
+  then run a controlled A/B comparison (with vs. without) on a fixed set
+  of prompts and measure Janus-artifact frequency.
+- **Normal-smoothness / orientation losses**, which real pipelines add to
+  discourage flat, degenerate, "billboard" geometry.
+- **Mesh extraction.** The output currently stays an implicit NeRF;
+  planned: marching cubes to export a `.obj`/`.ply` mesh.
+- **Resolution / representation ablation.** Current resolution is
+  constrained by T4 memory; planned: study the resolution/quality
+  tradeoff, or replace the NeRF with 3D Gaussian Splatting for faster
+  convergence.
+- **Multi-view-aware prior.** Currently uses a single 2D prior (SD 1.5);
+  swapping in a multi-view-aware diffusion model (e.g., MVDream,
+  Zero-1-to-3) is a known, published mitigation for 3D inconsistency and
+  a planned comparative experiment.
 
 ## 7. References
 
